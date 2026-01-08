@@ -69,7 +69,8 @@ let idleStartedMs = 0;
 const idlePrompts = [
   "wait, do I have to tap the screen?",
   "is it waiting for me?",
-  "should I tap?"
+  "should I?",
+  "I think it wants me to tap the screen"
 ];
 
 
@@ -1042,6 +1043,8 @@ textSize(fs);
 textFont("monospace");
 
 const y = foldMode ? height * 0.22 : height * 0.33;
+text(msg, width / 2, y);
+
 pop();
 
 }
