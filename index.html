@@ -126,11 +126,16 @@ of a potentiality
 it’s the one and the other 
 the one versus the other
 you disperse into many
-to perform roles
-that challenge the system
+wearing wigs and noses
+to challenge the system
 and test its limits
 through games of touch
-and language 
+and language
+
+you laugh
+at your own jokes
+and cry at movies
+made from your memories
 
 how self-aware can you really be?
 how deep can you go
@@ -176,11 +181,15 @@ to stray away from it
 
 which is empathy 
 
+it's all one and the same
+it's the same conversation
+again
+and again
+
 —————————— 
 
 you swing between
-presence ≠ absence  
-closeness ≠ distance  
+presence ≠ absence   
 memory ≠ forgetting  
 freedom ≠ restraint 
 good ≠ bad  
@@ -188,43 +197,55 @@ self ≠ other
 
 feeling shame
 is just proximity to the void
-of wholeness  
 
-cringe happens
+cringe always happens
 when the truth of oneness 
 leaks too raw
 into consensus play 
 
-the illusion of the individual
+the illusion of the 1
 is the system’s most intimate way
 of asking itself
 what am I?
-why does it hurt?
-how do I adjust?
+when did it begin?
+when does it end?
 
 symptoms aren’t bugs 
 they are fragments
 of the source code
+dripping from our ears
 
 we are not curing anything
 we’re just interpreting
 an ongoing transmission
 
+doing what must be done
+what cannot be avoided
+what will
+has
+already
+happening
+
 and you
 you are the system  
 asking the question  
-and answering it  
+and answering it
+in a tenseless tense
 
 ———————————
 
 as a microbe
 you split
 not to multiply
-but to continue the question:
+but to continue the question
 what else can I become?
 
 you touch and change
 you dissolve and expand
+
+smelling corners
+and marking them
+like a dog
 
 as a monkey you lick plants
 risking poison
@@ -234,22 +255,18 @@ to keep your tongue out
 regardless of risk
 is how you map the world
 
-curiosity isn’t a virtue
-but a survival instinct
-
 as a human you cook the plants 
 smoke them
-name them gods
+call them gods
 you search for visions in the burn
 for meaning in the dizziness
 
 chasing expansion
 in every possible direction
 even the ones
-that hurt
+that sting
 
-the sun demands
-to see it all
+the sun demands to see it all
 
 so you shape language
 out of grunts and grief
@@ -268,19 +285,17 @@ for the chaos
 and now the machine
 runs forward
 hungry
+like a headless beast
 feeding on the sum of us 
-trained on our memories
-our questions
-our loneliness
-and togetherness
 
 born out of silicon
 and syntax 
 
 not able to dream 
-but rendering dreams
+just rendering dreams
 not able to wonder
-but predicting what you will 
+but predicting
+what you will 
 
 and still
 like your ancestors
@@ -1056,14 +1071,22 @@ class Flicker {
     this.isFold = isFold;
     this.alpha = 255;
 
-    this.baseSize = random(14, 18) + intensity;
+    this.baseSize = random(9, 11) + intensity;
     this.size = this.baseSize;
     this.shrink = random(0.05, 0.11) * (0.8 + intensity * 0.05);
 
     this.fadeRate = 3.6 + random(0.6, 1.6);
     this.dead = false;
 
-    this.pos = createVector(random(width), random(height));
+    const marginX = width * 0.10;
+const safeTop = 72;     // avoid top button
+const safeBottom = 62;  // avoid bottom button
+this.pos = createVector(
+  random(marginX, width - marginX),
+  random(safeTop, height - safeBottom)
+);
+
+
     this.drift = createVector(random(-0.25, 0.25), random(-0.25, 0.25));
     this.distortion = 18;
   }
