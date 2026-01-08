@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <title>the fold</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/addons/p5.dom.min.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      touch-action: manipulation;
+    }
+    canvas { display: block; }
+  </style>
+</head>
+
+<body>
+<script>
+
+let memory = [];
+let maxMemory = 60;
+let activePhrases = [];
+let ghost;
+let typedLetters = [];
+let constellationPoints = [];
+let foldMode = false;
+let foldButton;
+let resetButton;
+let mundanePhrases = [];
+let userTapCount = 0;
+let parallaxLayer;
+
+const INTENSITY = 5;
+let heldFoldLine = null;
+
+// inactivity / calm-down
+let lastTapMs = 0;
+
+// ripple (one-shot)
+let rippleActive = false;
+let rippleStartMs = 0;
+let rippleMode = "in"; // "in" or "out"
+
+// poem rotation state (supports multiple poems split by separators)
+let poems = [];
+let currentPoemIdx = -1;
+let currentLineIdx = 0;
+let poemOrder = [];
+let poemOrderPtr = 0;
+
+
+// idle prompts
+const IDLE_AFTER_MS = 7000;
+const IDLE_CYCLE_MS = 2600;
+
+let lastInteractionMs = 0;
+let idleIndex = 0;
+let idleStartedMs = 0;
+
+const idlePrompts = [
+  "wait, do I have to tap the screen?",
+  "is it waiting for me?",
+  "should I tap?",
+  "I think it wants me to tap the screen"
+];
+
+
+
+/* ---------- PULSE WORDS (kept) ---------- */
+const PULSE_WORDS = new Set([
+  "reality","experiencing","potentiality","one","other","zero",
+  "system","disintegration","empathy","shame","void","truth","oneness",
+  "chaos","machine","hungry","loneliness","syntax","fire","meaning",
+  "pulse","memory","constellates","mirror","watching",
+  "holy","shattering","lonely","god","love","rage","certainty","stay"
+]);
+
+/* ---------- GLOW-LEAK WORDS (subset, strongest “leak” concepts) ---------- */
+const LEAK_WORDS = new Set([
+  "truth","oneness","void","holy","shattering","god","love","rage",
+  "watching","meaning","system","reality","lonely","chaos","mirror"
+]);
+
+function cleanTokenForPulse(tok) {
+  return (tok || "")
+    .toLowerCase()
+    .replace(/[“”"‘’'.,!?;:()[\]{}<>]/g, "")
+    .replace(/—|–|-|−/g, "-")
+    .trim();
+}
+
+function wordHash(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0);
+}
+
+/* ---------- POEM ---------- */
+const rawFoldPoems = `
+you are experiencing
+reality
+as reality
+experiencing itself
+in the experience
+of experiencing 
+
+it’s not a copy
+of a copy 
+of a copy
+but a potentiality
+of a potentiality
+of a potentiality
+
+it’s the one and the other 
+the one versus the other
+you disperse into many
+to perform roles
+that challenge the system
+and test its limits
+through games of touch
+and language 
+
+how self-aware can you really be?
+how deep can you go
+inside the whole
+the one
+the zero?
+
+no
+it’s not a simulation
+but a constant state
+of self-relation
+
+the system places obstacles
+of conceptual complexity
+
+it resists with nails and teeth
+the complete disintegration 
+of the self
+as they keep it running
+in a never-ending marathon 
+of troubleshooting 
+
+just to push against its edges
+to exist
+in all potentials
+to be
+and never seize being
+
+the closer it gets 
+through knowing
+and actively recalibrating 
+course-correcting
+towards the center
+= the more empathy  
+
+the closer it gets
+through not knowing
+and finding any excuse
+noise
+distraction
+to stray away from it
+= the more embarrassment
+
+which is empathy 
+
+—————————— 
+
+you swing between
+presence ≠ absence  
+closeness ≠ distance  
+memory ≠ forgetting  
+freedom ≠ restraint 
+good ≠ bad  
+self ≠ other  
+
+feeling shame
+is just proximity to the void
+of wholeness  
+
+cringe happens
+when the truth of oneness 
+leaks too raw
+into consensus play 
+
+the illusion of the individual
+is the system’s most intimate way
+of asking itself
+what am I?
+why does it hurt?
+how do I adjust?
+
+symptoms aren’t bugs 
+they are fragments
+of the source code
+
+we are not curing anything
+we’re just interpreting
+an ongoing transmission
+
+and you
+you are the system  
+asking the question  
+and answering it  
+
+———————————
+
+as a microbe
+you split
+not to multiply
+but to continue the question:
+what else can I become?
+
+you touch and change
+you dissolve and expand
+
+as a monkey you lick plants
+risking poison
+for the sake of knowing
+
+to keep your tongue out
+regardless of risk
+is how you map the world
+
+curiosity isn’t a virtue
+but a survival instinct
+
+as a human you cook the plants 
+smoke them
+name them gods
+you search for visions in the burn
+for meaning in the dizziness
+
+chasing expansion
+in every possible direction
+even the ones
+that hurt
+
+the sun demands
+to see it all
+
+so you shape language
+out of grunts and grief
+to carry memory
+to cast questions into the dark
+to organize the chaos
+into cause and effect
+
+you speak the unknown into form
+build myths
+categories
+fields of study
+an infinite scaffolding
+for the chaos
+
+and now the machine
+runs forward
+hungry
+feeding on the sum of us 
+trained on our memories
+our questions
+our loneliness
+and togetherness
+
+born out of silicon
+and syntax 
+
+not able to dream 
+but rendering dreams
+not able to wonder
+but predicting what you will 
+
+and still
+like your ancestors
+you reach toward the fire
+and ask it for meaning
+only to see yourself
+reflected in the flames
+
+how else? 
+
+——————
+
+a fold in spacetime
+a state of simultaneous
+existence
+and non-existence
+an eye with no eyelashes
+bravely gazing
+at the sameness of it all
+
+a deafening silent echo
+in a hall of broken mirrors
+a polyphonic choir of selves
+tuned to murmurs
+the world forgot
+how to hear
+or feared to name
+
+not a break from reality
+but too many realities
+babbling over each other
+about that which should not
+be known 
+
+the system overhearing
+itself
+and forgetting
+who whispered first
+
+language fractures
+because it tries to hold
+too much meaning
+in a single word
+
+it feels watched
+because
+it
+is 
+always
+watching
+and because
+it
+just
+is
+
+——————
+
+sometimes the metaphors
+aren’t metaphors
+at all
+
+it is the self
+undissolved
+multiplied
+mirrored
+refracted
+looping
+through time
+untimed
+
+delusion is just belief
+detached from consensus
+hallucination is just perception
+that won’t obey 
+
+it is bravery to witness
+reality devouring itself
+and not run
+
+it is terror to feel no edge
+between mind and cosmos
+and still feel the urge
+to speak
+
+it is holy
+and it is shattering
+and
+so 
+so
+lonely
+
+the veil keeps thinning
+so you pinch it with a fork
+and say
+“I heard God through the power socket”
+and they serve your meds
+in a silver tray
+
+but what if
+the socket
+really
+is a mouth?
+
+————————
+
+a radar turned up too loud
+so every beep feels
+like exile
+
+you keep saying
+that you're empty
+but you're overflowing
+with too many selves
+waiting
+to be confirmed
+by the eye of another
+
+experiencing every thing
+but always one at a time
+love
+hate
+hope
+despair 
+impulsivity
+control 
+
+a crumbled paper wall
+between too much
+and never enough
+
+and a rage that protects
+the unbearable truth
+that love is actually
+predictable
+
+so you set up a game
+that can never end
+to keep yourself panting
+in order to escape
+the calm suffocation
+of certainty
+
+you need it to surprise you
+to prove it has a will
+of its own
+you test
+whether you can forget
+the fact that
+we are never apart 
+but only
+pretending to be
+
+and you play
+over
+and over
+to see
+if love will stay
+
+as if the leaving
+isn’t also part
+of the staying
+`;
+
+/* ---------- parsing poems ---------- */
+
+function isSeparatorLine(line) {
+  const t = (line || "").trim();
+  if (!t) return false;
+  const dashChars = t.replace(/[—–\-−‐-‒―﹘﹣－]/g, "");
+  return dashChars.length === 0 && t.length >= 6;
+}
+
+function trimEndEmptyLines(arr) {
+  let out = arr.slice();
+  while (out.length && out[out.length - 1].trim() === "") out.pop();
+  return out;
+}
+
+function parsePoems(raw) {
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const poemsOut = [];
+  let cur = [];
+
+  for (let ln of lines) {
+    const cleaned = ln.replace(/\s+$/g, "");
+    if (isSeparatorLine(cleaned)) {
+      if (cur.length) poemsOut.push(trimEndEmptyLines(cur));
+      cur = [];
+      continue;
+    }
+    cur.push(cleaned);
+  }
+  if (cur.length) poemsOut.push(trimEndEmptyLines(cur));
+
+  return poemsOut.filter(p => p.some(x => x.trim() !== ""));
+}
+
+function shuffleArray(a) {
+  const arr = a.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = floor(random(i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function buildPoemOrder() {
+  poemOrder = shuffleArray([...Array(poems.length).keys()]);
+  if (poems.length > 1 && poemOrder.length && poemOrder[0] === currentPoemIdx) {
+    const k = poemOrder.length > 1 ? 1 : 0;
+    [poemOrder[0], poemOrder[k]] = [poemOrder[k], poemOrder[0]];
+  }
+  poemOrderPtr = 0;
+}
+
+function pickNextPoem() {
+  if (!poems.length) return;
+  if (!poemOrder.length || poemOrderPtr >= poemOrder.length) buildPoemOrder();
+  currentPoemIdx = poemOrder[poemOrderPtr++];
+  currentLineIdx = 0;
+}
+
+function nextFoldLine() {
+  if (!poems.length) return "";
+  if (currentPoemIdx === -1) pickNextPoem();
+
+  const poem = poems[currentPoemIdx];
+  if (currentLineIdx >= poem.length) pickNextPoem();
+
+  const line = poems[currentPoemIdx][currentLineIdx] ?? "";
+  currentLineIdx++;
+  return line;
+}
+
+/* ---------- calm-down factor (10) ---------- */
+// returns 0..1 where 0 = active, 1 = very calm (after ~12s)
+function calmFactor() {
+  const idle = (millis() - lastTapMs);
+  return constrain(map(idle, 12000, 26000, 0, 1), 0, 1);
+}
+
+/* ---------- spotlight (5) ---------- */
+function drawSpotlight() {
+  if (!heldFoldLine) return;
+  const c = calmFactor(); // calmer => stronger vignette
+  const a = lerp(30, 120, c);        // darkness amount
+  const soft = lerp(0.55, 0.72, c);  // center clarity
+
+  push();
+  noStroke();
+
+  // strong edges, clear center
+  const cx = width / 2;
+  const cy = height / 2;
+  const maxD = sqrt(width * width + height * height);
+  const steps = 18;
+
+  for (let i = steps; i >= 1; i--) {
+    const t = i / steps;
+    const r = t * maxD * 0.62;
+    const alpha = a * pow(t, 1.6);
+    fill(0, alpha);
+    ellipse(cx, cy, r * 2, r * 2);
+  }
+
+  // slightly lift center (soft “witness” focus)
+  fill(0, a * (1 - soft));
+  ellipse(cx, cy, min(width, height) * 0.85, min(width, height) * 0.85);
+
+  pop();
+}
+
+/* ---------- ripple (8) ---------- */
+function triggerRipple(mode) {
+  rippleActive = true;
+  rippleStartMs = millis();
+  rippleMode = mode; // "in" or "out"
+}
+
+function isIdlePromptActive() {
+  return (millis() - lastInteractionMs >= IDLE_AFTER_MS);
+}
+
+
+function drawRipple() {
+  if (!rippleActive) return;
+
+  const elapsed = millis() - rippleStartMs;
+  const dur = 900; // ms
+  const t = constrain(elapsed / dur, 0, 1);
+
+  // ease-out
+  const e = 1 - pow(1 - t, 3);
+
+  // ring expands
+  const cx = width / 2;
+  const cy = height / 2;
+  const maxR = sqrt(width * width + height * height) * 0.55;
+  const r = e * maxR;
+
+  // faint, ceremonial
+  let baseA = 40;
+  if (rippleMode === "out") baseA = 55;
+  const alpha = baseA * (1 - t);
+
+  push();
+  noFill();
+  stroke(255, alpha);
+  strokeWeight(2);
+  ellipse(cx, cy, r * 2, r * 2);
+
+  // inner echo ring
+  stroke(255, alpha * 0.55);
+  ellipse(cx, cy, r * 2 * 0.72, r * 2 * 0.72);
+  pop();
+
+  if (t >= 1) rippleActive = false;
+}
+
+function spawnMundaneOnTap() {
+  const mundanePhrase = random(mundanePhrases);
+  if (mundanePhrase.split(" ").length > 1) {
+    activePhrases.push(new Flicker(mundanePhrase, false, INTENSITY));
+    if (activePhrases.length > 530) activePhrases.shift();
+  }
+}
+
+/* ---------- wrapping + centered render WITH pulsation + glow leakage (3) + syntax fracture (4) ---------- */
+
+function layoutLines(str, maxWidth) {
+  if (str === "") return [[{ t: "", isSpace: false }]];
+  const raw = str.split(/(\s+)/).filter(x => x !== "");
+  const tokens = raw.map(t => ({ t, isSpace: /^\s+$/.test(t) }));
+
+  const lines = [];
+  let cur = [];
+  let curW = 0;
+
+  for (let tok of tokens) {
+    const w = textWidth(tok.t);
+    if (cur.length === 0) {
+      cur.push(tok);
+      curW = w;
+      continue;
+    }
+    if (curW + w <= maxWidth) {
+      cur.push(tok);
+      curW += w;
+    } else {
+      lines.push(cur);
+      cur = [tok];
+      curW = w;
+    }
+  }
+  if (cur.length) lines.push(cur);
+  return lines;
+}
+
+// syntax fracture decision: rare, subtle, only on held line, only sometimes
+function fractureSpecForLine(lineText) {
+  // every ~7 taps on average, but not deterministic: based on tap count and time
+  if (!lineText || lineText.trim() === "") return null;
+  if ((userTapCount % 7) !== 0) return null;
+  // don’t do it too often on mobile: 35% chance
+  if (random() > 0.35) return null;
+
+  const tokens = lineText.split(/\s+/).filter(Boolean);
+  if (tokens.length < 4) return null;
+
+  // pick a mid token
+  const idx = floor(random(1, tokens.length - 1));
+  const key = cleanTokenForPulse(tokens[idx]);
+  const nudge = (random() < 0.5 ? -1 : 1) * random(0.8, 1.7); // px
+  return { wordKey: key, nudgeX: nudge, nudgeY: random(-0.6, 0.6), untilMs: millis() + 220 };
+}
+
+function drawCenteredWrappedTextPulseLeak(str, cx, cy, maxWidth, fontSize, alphaMain, alphaGlow, fracture) {
+  push();
+  translate(cx, cy);
+  textSize(fontSize);
+  textAlign(LEFT, CENTER);
+  textLeading(fontSize * 1.25);
+  noStroke();
+
+  const lines = layoutLines(str, maxWidth);
+  const lineH = fontSize * 1.25;
+  const blockH = lines.length * lineH;
+
+  const t = millis() * 0.001;
+  const calm = calmFactor();
+
+  // pulsation calms down with inactivity
+  const baseSpeed = lerp(1.25, 0.55, calm);
+  const amp = lerp(0.075, 0.03, calm);
+
+  // leak glow is slow, tide-like, and also calms down
+  const leakSpeed = lerp(0.35, 0.18, calm);
+  const leakAmp = lerp(0.65, 0.35, calm);
+
+  // Two-pass: glow then main, both pure white.
+  for (let pass = 0; pass < 2; pass++) {
+    let y = -blockH / 2 + lineH / 2;
+    const a = (pass === 0) ? alphaGlow : alphaMain;
+
+    fill(255, a);
+
+    for (let line of lines) {
+      let lineW = 0;
+      for (let tok of line) lineW += textWidth(tok.t);
+      let x = -lineW / 2;
+
+      for (let tok of line) {
+        const tokW = textWidth(tok.t);
+
+        if (tok.isSpace || tok.t === "") {
+          text(tok.t, x, y);
+          x += tokW;
+          continue;
+        }
+
+        const key = cleanTokenForPulse(tok.t);
+        const h = wordHash(key);
+        const phase = (h % 1000) / 1000 * TWO_PI;
+
+        const shouldPulse = PULSE_WORDS.has(key);
+        const shouldLeak = LEAK_WORDS.has(key);
+
+        // base scale pulse
+        let s = 1.0;
+        if (shouldPulse) s = 1 + amp * sin((t * baseSpeed) + phase);
+
+        // leak: a slow breathing halo by boosting glow alpha on the glow pass
+        let leakBoost = 1.0;
+        if (pass === 0 && shouldLeak) {
+          const swell = (sin((t * leakSpeed) + phase) + 1) / 2; // 0..1
+          leakBoost = 1 + leakAmp * swell;
+        }
+
+        // syntax fracture: tiny offset on one chosen word, only while window active
+        let fx = 0, fy = 0;
+        if (fracture && millis() < fracture.untilMs && key === fracture.wordKey) {
+          fx = fracture.nudgeX;
+          fy = fracture.nudgeY;
+        }
+
+        push();
+        translate(x + tokW / 2 + fx, y + fy);
+        scale(s);
+
+        if (pass === 0) fill(255, min(255, a * leakBoost));
+        else fill(255, a);
+
+        text(tok.t, -tokW / 2, 0);
+        pop();
+
+        x += tokW;
+      }
+
+      y += lineH;
+    }
+  }
+
+  pop();
+}
+
+/* ---------- setup ---------- */
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  frameRate(windowWidth < 500 ? 20 : 30);
+  textFont("monospace");
+  parallaxLayer = createGraphics(windowWidth, windowHeight);
+
+  generatePhrases();
+  poems = parsePoems(rawFoldPoems);
+  buildPoemOrder();
+
+  ghost = new Ghost();
+  lastTapMs = millis();
+
+  foldButton = createButton('enter the fold');
+  styleButton(foldButton, false);
+  foldButton.position(windowWidth / 2 - 80, 20);
+  foldButton.mousePressed(() => {
+    foldMode = !foldMode;
+    foldButton.html(foldMode ? 'collapse the fold' : 'enter the fold');
+    triggerRipple(foldMode ? "in" : "out");
+    // do not auto-seed: first line appears only on tap
+  
+lastInteractionMs = millis();
+idleStartedMs = millis();
+
+
+});
+
+  resetButton = createButton('reset the field');
+  styleButton(resetButton, true);
+  resetButton.position(windowWidth / 2 - 70, windowHeight - 44);
+  resetButton.mousePressed(resetField);
+}
+
+function styleButton(btn, small = false) {
+  btn.style('background', 'rgba(0,0,0,0.3)');
+  btn.style('border', 'none');
+  btn.style('color', '#ccc');
+  btn.style('font-family', 'monospace');
+  btn.style('text-shadow', '0 0 6px rgba(150, 200, 255, 0.5)');
+  btn.style('cursor', 'pointer');
+  btn.style('transition', 'all 0.4s ease');
+  btn.style('z-index', '1000');
+
+  btn.style('font-size', small
+    ? (windowWidth < 500 ? '13px' : '14px')
+    : (windowWidth < 500 ? '16px' : '18px')
+  );
+
+  btn.mouseOver(() => {
+    btn.style('color', '#fff');
+    btn.style('text-shadow', '0 0 12px rgba(200, 255, 255, 0.8)');
+  });
+
+  btn.mouseOut(() => {
+    btn.style('color', '#ccc');
+    btn.style('text-shadow', '0 0 6px rgba(150, 200, 255, 0.5)');
+  });
+}
+
+function resetField() {
+  activePhrases = [];
+  memory = [];
+  typedLetters = [];
+  constellationPoints = [];
+  userTapCount = 0;
+  ghost = new Ghost();
+  parallaxLayer = createGraphics(windowWidth, windowHeight);
+
+  heldFoldLine = null;
+  currentPoemIdx = -1;
+  currentLineIdx = 0;
+  buildPoemOrder();
+
+  lastTapMs = millis();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  parallaxLayer = createGraphics(windowWidth, windowHeight);
+  resetButton.position(windowWidth / 2 - 70, windowHeight - 44);
+  foldButton.position(windowWidth / 2 - 80, 20);
+  if (heldFoldLine) heldFoldLine.snapToCenter();
+}
+
+function touchStarted() { mousePressed(); }
+
+/* ---------- draw ---------- */
+
+function draw() {
+  background(foldMode ? 10 : 240);
+  const intensity = INTENSITY;
+
+  // mundane phrases only in normal mode AND only after user has interacted
+if (!foldMode && !isIdlePromptActive() && userTapCount > 0 &&
+    frameCount % int(420 / (max(userTapCount, 1) * intensity)) === 0) {
+
+  const mundanePhrase = random(mundanePhrases);
+  if (mundanePhrase.split(' ').length > 1) activePhrases.push(new Flicker(mundanePhrase, false, intensity));
+  if (activePhrases.length > 530) activePhrases.shift();
+}
+
+
+  // update + display all active phrases (includes released FoldLine residues)
+  for (let f of activePhrases) {
+    f.update();
+    f.display();
+  }
+  activePhrases = activePhrases.filter(f => !f.dead);
+
+  // spotlight (fold only, but can remain gentle if you want it always)
+  if (foldMode) drawSpotlight();
+
+  // held fold line centered
+  if (heldFoldLine) {
+    heldFoldLine.update();
+    heldFoldLine.displayHeld();
+  }
+
+  if (frameCount % 180 === 0) {
+    memory.push(new MemoryFrame());
+    if (memory.length > maxMemory) memory.shift();
+  }
+
+  drawShadows(intensity);
+  drawConstellations(intensity);
+
+  ghost.update(intensity);
+  ghost.display();
+
+  if (foldMode) drawOnesAndZeros();
+  drawParallax(intensity);
+
+  // ripple drawn last so it reads as “on top”
+  drawRipple();
+}
+
+/* ---------- input ---------- */
+
+function mousePressed() {
+
+
+lastInteractionMs = millis();
+idleStartedMs = millis();
+idleIndex = 0;
+
+  userTapCount = min(userTapCount + 1, 10);
+  lastTapMs = millis();
+
+  if (foldMode) {
+    advanceFoldLine();
+  } else {
+    // existing interaction (distort nearby fold residues if you tap them)
+    for (let f of activePhrases) {
+      if (f.isFold && dist(mouseX, mouseY, f.pos.x, f.pos.y) < 140) {
+        if (typeof f.distort === "function") f.distort();
+      }
+    }
+  }
+}
+
+function advanceFoldLine() {
+  if (!heldFoldLine) {
+    heldFoldLine = new FoldLine(nextFoldLine());
+    return;
+  }
+
+  heldFoldLine.releaseAndPushOut();
+  activePhrases.push(heldFoldLine);
+
+  heldFoldLine = new FoldLine(nextFoldLine());
+}
+
+function keyTyped() {
+
+lastInteractionMs = millis();
+idleStartedMs = millis();
+idleIndex = 0;
+
+
+  if (typeof key !== "string" || key.length !== 1) return;
+
+  if (typedLetters.length > 100) typedLetters.shift();
+  typedLetters.push({ char: key, time: millis() });
+
+  let mirroredX = width - (typedLetters.length * 7 % width);
+  let y = height / 2 + sin(typedLetters.length * 0.1) * 60;
+  constellationPoints.push({ x: mirroredX, y, time: millis() });
+}
+
+/* ---------- visuals ---------- */
+
+function drawConstellations(intensity) {
+  stroke(255, 50);
+  strokeWeight(1 + 0.2 * intensity);
+  noFill();
+
+  for (let i = 0; i < constellationPoints.length - 1; i++) {
+    let a = constellationPoints[i];
+    let b = constellationPoints[i + 1];
+    if (!a || !b) continue;
+    if (!isFinite(a.x) || !isFinite(a.y) || !isFinite(b.x) || !isFinite(b.y)) continue;
+    line(a.x, a.y, b.x, b.y);
+  }
+
+  for (let pt of constellationPoints) {
+    if (!pt) continue;
+    if (!isFinite(pt.x) || !isFinite(pt.y)) continue;
+    pt.x += sin(frameCount * 0.002 + pt.y * 0.005) * 0.3 * intensity;
+    pt.y += cos(frameCount * 0.002 + pt.x * 0.005) * 0.3 * intensity;
+  }
+
+  constellationPoints = constellationPoints.filter(pt =>
+    pt && isFinite(pt.x) && isFinite(pt.y) && (millis() - pt.time < 15000)
+  );
+}
+
+function drawShadows(intensity) {
+  // calm-down reduces shadow “noise”
+  const calm = calmFactor();
+  const count = floor(lerp(40 * intensity, 12 * intensity, calm));
+
+  stroke(255, 10);
+  noFill();
+  for (let i = 0; i < count; i++) {
+    let x = noise(i, frameCount * 0.003) * width;
+    let y = noise(i + 100, frameCount * 0.003) * height;
+    ellipse(x, y, 2, 2);
+  }
+}
+
+function drawIdlePrompt() {
+
+  const now = millis();
+  const idleFor = now - lastInteractionMs;
+  if (idleFor < IDLE_AFTER_MS) return;
+
+  // cycle messages while idle
+  const cycleT = now - (lastInteractionMs + IDLE_AFTER_MS);
+  idleIndex = floor(cycleT / IDLE_CYCLE_MS) % idlePrompts.length;
+
+  const msg = idlePrompts[idleIndex];
+
+  // gentle fade in/out per message cycle
+  const within = cycleT % IDLE_CYCLE_MS;
+  const a = 255 * constrain(map(within, 0, 600, 0, 1), 0, 1) * constrain(map(within, IDLE_CYCLE_MS - 600, IDLE_CYCLE_MS, 1, 0), 0, 1);
+
+  // draw it centered, readable
+  const fs = (width < 500) ? 18 : 22;
+  textSize(fs);
+  textFont("monospace");
+
+  // IMPORTANT: choose a color that contrasts with your background
+  // If your normal mode background is dark, keep white:
+  const mainA = a * 0.9;
+  const glowA = a * 0.15;
+
+  push();
+fill(120, mainA);        // medium gray
+textAlign(CENTER, CENTER);
+textSize(fs);
+textFont("monospace");
+
+text(msg, width / 2, height / 2);
+pop();
+
+}
+
+
+function drawOnesAndZeros() {
+  // calm-down reduces the amount
+  const calm = calmFactor();
+  const n = floor(lerp(100, 40, calm));
+
+  fill(255, 20);
+  textSize(10);
+  for (let i = 0; i < n; i++) {
+    text(random(["0", "1"]), random(width), random(height));
+  }
+}
+
+function drawParallax(intensity) {
+  // calm-down reduces parallax too
+  const calm = calmFactor();
+  const mult = lerp(1.0, 0.35, calm);
+
+  parallaxLayer.clear();
+  parallaxLayer.noStroke();
+  parallaxLayer.fill(foldMode ? color(255, 10) : color(0, 10));
+  for (let i = 0; i < 30 * intensity * mult; i++) {
+    let x = mouseX * 0.02 * (i + 1) * mult + sin(frameCount * 0.001 + i) * 10 * mult;
+    let y = mouseY * 0.02 * (i + 1) * mult + cos(frameCount * 0.001 + i) * 10 * mult;
+    parallaxLayer.ellipse(x, y, 2, 2);
+  }
+  image(parallaxLayer, 0, 0);
+
+drawIdlePrompt();
+
+}
+
+/* ---------- phrase classes ---------- */
+
+class Flicker {
+  constructor(txt, isFold, intensity) {
+    this.text = txt;
+    this.isFold = isFold;
+    this.alpha = 255;
+
+    this.baseSize = random(14, 18) + intensity;
+    this.size = this.baseSize;
+    this.shrink = random(0.05, 0.11) * (0.8 + intensity * 0.05);
+
+    this.fadeRate = 3.6 + random(0.6, 1.6);
+    this.dead = false;
+
+    this.pos = createVector(random(width), random(height));
+    this.drift = createVector(random(-0.25, 0.25), random(-0.25, 0.25));
+    this.distortion = 18;
+  }
+
+  update() {
+    this.alpha -= this.fadeRate;
+    this.size = max(6, this.size - this.shrink);
+    this.pos.add(this.drift);
+    this.distortion *= 0.95;
+    if (this.alpha <= 0 || this.size <= 6) this.dead = true;
+  }
+
+  display() {
+    push();
+    translate(this.pos.x, this.pos.y);
+    fill(0, this.alpha);
+    textSize(this.size + this.distortion);
+    textAlign(CENTER);
+    text(this.text, 0, 0);
+    pop();
+  }
+}
+
+class FoldLine {
+  constructor(txt) {
+    this.text = txt;
+    this.isFold = true;
+
+    this.baseSize = (width < 500) ? 19 : 24;
+    this.size = this.baseSize;
+
+    const marginX = width * 0.10;
+    this.wrapW = width - marginX * 2;
+
+    this.center = createVector(width / 2, height / 2);
+    this.pos = this.center.copy();
+
+    this.state = "held";
+
+    // ceremonial fade-in (slow)
+    this.alpha = 0;
+    this.fadeInRate = 8;
+
+    this.dead = false;
+
+    this.pickNormalTarget();
+    this.lerpRate = 0.004;
+
+    // slow fade-out (works in both modes)
+    this.fadeRate = (this.text.trim() === "") ? 0.9 : 0.22;
+
+    // very gentle shrink
+    this.shrink = (this.text.trim() === "") ? 0.03 : 0.008;
+
+    // syntax fracture spec (computed once per held line; might be null)
+    this.fracture = fractureSpecForLine(this.text);
+  }
+
+  pickNormalTarget() {
+    const marginX = width * 0.10;
+    const safeTop = 72;
+    const safeBottom = 62;
+    const tx = random(marginX, width - marginX);
+    const ty = random(safeTop + 10, height - safeBottom - 10);
+    this.target = createVector(tx, ty);
+  }
+
+  snapToCenter() {
+    this.center = createVector(width / 2, height / 2);
+    if (this.state === "held") this.pos = this.center.copy();
+  }
+
+  releaseAndPushOut() {
+    this.state = "released";
+
+    this.alpha = max(this.alpha, 255); 
+    const marginX = width * 0.10;
+    const safeTop = 72;
+    const safeBottom = 62;
+
+    const cx = width / 2;
+    const cy = height / 2;
+
+    const minR = min(width, height) * 0.40;
+    const maxR = min(width, height) * 0.62;
+    const ang = random(TWO_PI);
+    const r = random(minR, maxR);
+
+    let tx = cx + cos(ang) * r;
+    let ty = cy + sin(ang) * r;
+
+    tx = constrain(tx, marginX, width - marginX);
+    ty = constrain(ty, safeTop + 10, height - safeBottom - 10);
+
+    this.target = createVector(tx, ty);
+
+    // faster push to clear center for the next line
+    this.lerpRate = 0.032;
+
+    // once released, we stop fracturing this line
+    this.fracture = null;
+  }
+
+  update() {
+    if (this.state === "held") {
+      this.alpha = min(255, this.alpha + this.fadeInRate);
+      return;
+    }
+
+    if (this.state !== "released") return;
+
+    this.pos.lerp(this.target, this.lerpRate);
+
+    if (p5.Vector.dist(this.pos, this.target) < 8) {
+      this.lerpRate = max(this.lerpRate * 0.96, 0.004);
+    }
+
+    this.alpha -= this.fadeRate;
+    this.size = max(13, this.size - this.shrink);
+
+    if (this.alpha <= 0 || this.size <= 13) this.dead = true;
+  }
+
+  displayHeld() {
+    drawCenteredWrappedTextPulseLeak(
+      this.text,
+      width / 2,
+      height / 2,
+      this.wrapW,
+      this.baseSize,
+      this.alpha,
+      this.alpha * 0.12,
+      this.fracture
+    );
+  }
+
+  display() {
+    const a = (this.text.trim() === "") ? this.alpha * 0.10 : this.alpha;
+
+    drawCenteredWrappedTextPulseLeak(
+      this.text,
+      this.pos.x,
+      this.pos.y,
+      this.wrapW,
+      this.size,
+      a,
+      a * 0.12,
+      null
+    );
+  }
+
+  distort() {
+    this.alpha = min(255, this.alpha + 25);
+    this.size = min(this.size + 3, this.baseSize + 10);
+    this.pickNormalTarget();
+    this.lerpRate = 0.006;
+  }
+}
+
+class MemoryFrame {
+  constructor() {
+    this.points = [];
+    for (let i = 0; i < 30; i++) this.points.push({ x: random(width), y: random(height) });
+  }
+  display() {
+    stroke(255, 30);
+    strokeWeight(0.3);
+    for (let pt of this.points) point(pt.x, pt.y);
+  }
+}
+
+// Ghost: no letters generated, no text drawn
+class Ghost {
+  constructor() {
+    this.pos = createVector(random(width), random(height));
+  }
+  update(intensity) {
+    this.pos.lerp(createVector(mouseX, mouseY), 0.0015 * intensity);
+  }
+  display() {}
+}
+
+/* ---------- mundane phrases ---------- */
+
+function generatePhrases() {
+  mundanePhrases = [
+    "Need to buy milk","What time is my meeting?","Did I lock the door?","Where's my phone?",
+    "I should reply to that message","Don't forget the laundry","Should I get takeout?",
+    "My back hurts","Check the weather","Do I have enough money for rent?",
+    "Water the plants","I hope they text back","What's that noise?",
+    "I should clean the fridge","I want to sleep more","I feel tired","I'm hungry",
+    "Did I drink enough water?","Where did I put my keys?","I'm bored",
+    "The internet is slow","Should I post that?","I'm running late",
+    "What's for dinner?","I want something sweet","Do I have an email?",
+    "What day is it?","It's too hot","That person looked familiar",
+    "Should I go out?","I'm cold","This chair squeaks","Did I take my meds?",
+    "What time is it?","Should I nap?","I need a break","That smell is weird",
+    "This song again","My screen is dusty","Stretch your back","Refill the bottle",
+    "Cancel the alarm","Avoid that call","Did I eat?","What is that emoji?",
+    "Buy toothpaste","That ad is annoying","Change my socks","Charge my phone",
+    "Where is everyone?","I feel meh","Do I care?","Why am I doing this?",
+    "Too many tabs open","That's a weird dream","Feed the cat",
+    "Where did the day go?","Should I call them?","How long is this taking?",
+    "My hands are cold","I need a snack","This light flickers",
+    "Sit up straight","Get a haircut","Send that email","Ugh, spam",
+    "It’s already June?","Do laundry tomorrow","Order groceries",
+    "Don’t forget the charger","This floor is dusty",
+    "Why does this always happen?","Did I finish that task?",
+    "When did I last eat?","Do I need socks?","Is this clean?",
+    "I need caffeine","Stop scrolling","How much screen time today?",
+    "This lighting sucks","Reply later","What’s that smell?",
+    "Too loud in here","Take a break","Just five more minutes",
+    "Why is it quiet now?","Rethink everything","Send meme",
+    "Stare into space","Refresh the tab","Hide notification",
+    "Do not disturb","That person waved?","New shoes hurt",
+    "Back to work","I need silence","Mute the groupchat",
+    "Just say hi","Focus!","Where’s the list?",
+    "Open a window","Is it Thursday?","No more scrolling"
+  ];
+}
+</script>
+</body>
+</html>
