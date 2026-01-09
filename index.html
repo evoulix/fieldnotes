@@ -59,8 +59,8 @@ let poemOrderPtr = 0;
 
 
 // idle prompts
-const IDLE_AFTER_MS = 7000;
-const IDLE_CYCLE_MS = 2600;
+const IDLE_AFTER_MS = 9000;
+const IDLE_CYCLE_MS = 3600;
 
 let lastInteractionMs = 0;
 let idleIndex = 0;
@@ -69,8 +69,7 @@ let idleStartedMs = 0;
 const idlePrompts = [
   "wait, do I have to tap the screen?",
   "is it waiting for me?",
-  "should I?",
-  "I think it wants me to tap the screen"
+  "should I?"
 ];
 
 
@@ -798,7 +797,7 @@ function setup() {
   foldButton.position(windowWidth / 2 - 80, 20);
   foldButton.mousePressed(() => {
     foldMode = !foldMode;
-    foldButton.html(foldMode ? 'collapse the fold' : 'enter the fold');
+    foldButton.html(foldMode ? 'collapse the fold' : 'tap here to enter the fold');
     triggerRipple(foldMode ? "in" : "out");
     // do not auto-seed: first line appears only on tap
   
@@ -808,7 +807,7 @@ idleStartedMs = millis();
 
 });
 
-  resetButton = createButton('reset the field');
+  resetButton = createButton('tap here to reset the field');
   styleButton(resetButton, true);
   resetButton.position(windowWidth / 2 - 70, windowHeight - 44);
   resetButton.mousePressed(resetField);
