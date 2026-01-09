@@ -792,12 +792,12 @@ function setup() {
   ghost = new Ghost();
   lastTapMs = millis();
 
-  foldButton = createButton('tap here to enter the fold');
+  foldButton = createButton('enter the fold');
   styleButton(foldButton, false);
   foldButton.position(windowWidth / 2 - 80, 20);
   foldButton.mousePressed(() => {
     foldMode = !foldMode;
-    foldButton.html(foldMode ? 'tap here to collapse the fold' : 'tap here to enter the fold');
+    foldButton.html(foldMode ? 'collapse the fold' : 'enter the fold');
     triggerRipple(foldMode ? "in" : "out");
     // do not auto-seed: first line appears only on tap
   
@@ -807,7 +807,7 @@ idleStartedMs = millis();
 
 });
 
-  resetButton = createButton('tap here to reset the field');
+  resetButton = createButton('reset the field');
   styleButton(resetButton, true);
   resetButton.position(windowWidth / 2 - 70, windowHeight - 44);
   resetButton.mousePressed(resetField);
