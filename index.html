@@ -870,6 +870,9 @@ function resetField() {
   heldFoldLine = null;
   currentPoemIdx = -1;
   currentLineIdx = 0;
+  poemOrder = [];
+  poemOrderPtr = 0;
+
   buildPoemOrder();
 
   lastTapMs = millis();
