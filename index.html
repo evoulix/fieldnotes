@@ -30,6 +30,27 @@
   button:active {
     transform: scale(0.97);
   }
+
+  /* --- buttons: breathe + hide/show timing (added) --- */
+  @keyframes breathe {
+    0%   { opacity: 0.85; }
+    50%  { opacity: 1; }
+    100% { opacity: 0.85; }
+  }
+
+  button.breathing {
+    animation: breathe 4s ease-in-out infinite;
+  }
+
+  button {
+    transition: opacity 1.2s ease;
+  }
+
+  button.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* --- end added --- */
     
   </style>
 </head>
@@ -81,6 +102,32 @@ const idlePrompts = [
   "maybe I should tap?",
   "should I touch the screen?"
 ];
+
+/* --- button hide/show behavior (added) --- */
+const BUTTON_SHOW_AFTER_MS = 3000; // appear after 3s idle
+const BUTTON_STAY_MS = 5000;       // stay visible for 5s
+let buttonsHidden = false;
+let buttonsShownAt = 0;
+
+function hideButtons() {
+  if (buttonsHidden) return;
+  foldButton.addClass('hidden');
+  resetButton.addClass('hidden');
+  foldButton.removeClass('breathing');
+  resetButton.removeClass('breathing');
+  buttonsHidden = true;
+}
+
+function showButtons() {
+  if (!buttonsHidden) return;
+  foldButton.removeClass('hidden');
+  resetButton.removeClass('hidden');
+  foldButton.addClass('breathing');
+  resetButton.addClass('breathing');
+  buttonsHidden = false;
+  buttonsShownAt = millis();
+}
+/* --- end added --- */
 
 
 
@@ -820,16 +867,23 @@ function setup() {
     triggerRipple(foldMode ? "in" : "out");
     // do not auto-seed: first line appears only on tap
   
-lastInteractionMs = millis();
-idleStartedMs = millis();
+    lastInteractionMs = millis();
+    idleStartedMs = millis();
 
-
-});
+    /* --- buttons timing (added) --- */
+    hideButtons();
+    /* --- end added --- */
+  });
 
   resetButton = createButton('reset the field');
   styleButton(resetButton, true);
   resetButton.position(windowWidth / 2 - 70, windowHeight - 54);
   resetButton.mousePressed(resetField);
+
+  /* --- start hidden initially (added) --- */
+  hideButtons();
+  lastInteractionMs = millis();
+  /* --- end added --- */
 }
 
 function styleButton(btn, small = false) {
@@ -876,6 +930,11 @@ function resetField() {
   buildPoemOrder();
 
   lastTapMs = millis();
+
+  /* --- buttons timing (added) --- */
+  lastInteractionMs = millis();
+  hideButtons();
+  /* --- end added --- */
 }
 
 function windowResized() {
@@ -895,14 +954,13 @@ function draw() {
   const intensity = INTENSITY;
 
   // mundane phrases only in normal mode AND only after user has interacted
-if (!foldMode && !isIdlePromptActive() && userTapCount > 0 &&
-    frameCount % int(420 / (max(userTapCount, 1) * intensity)) === 0) {
+  if (!foldMode && !isIdlePromptActive() && userTapCount > 0 &&
+      frameCount % int(420 / (max(userTapCount, 1) * intensity)) === 0) {
 
-  const mundanePhrase = random(mundanePhrases);
-  if (mundanePhrase.split(' ').length > 1) activePhrases.push(new Flicker(mundanePhrase, false, intensity));
-  if (activePhrases.length > 530) activePhrases.shift();
-}
-
+    const mundanePhrase = random(mundanePhrases);
+    if (mundanePhrase.split(' ').length > 1) activePhrases.push(new Flicker(mundanePhrase, false, intensity));
+    if (activePhrases.length > 530) activePhrases.shift();
+  }
 
   // update + display all active phrases (includes released FoldLine residues)
   for (let f of activePhrases) {
@@ -936,16 +994,33 @@ if (!foldMode && !isIdlePromptActive() && userTapCount > 0 &&
 
   // ripple drawn last so it reads as “on top”
   drawRipple();
+
+  /* --- buttons visibility timing (added) --- */
+  const now = millis();
+
+  // show after 3s idle
+  if (buttonsHidden && (now - lastInteractionMs > BUTTON_SHOW_AFTER_MS)) {
+    showButtons();
+  }
+
+  // hide after 5s visible
+  if (!buttonsHidden && (now - buttonsShownAt > BUTTON_STAY_MS)) {
+    hideButtons();
+  }
+  /* --- end added --- */
 }
 
 /* ---------- input ---------- */
 
 function mousePressed() {
 
+  lastInteractionMs = millis();
+  idleStartedMs = millis();
+  idleIndex = 0;
 
-lastInteractionMs = millis();
-idleStartedMs = millis();
-idleIndex = 0;
+  /* --- buttons timing (added) --- */
+  hideButtons();
+  /* --- end added --- */
 
   userTapCount = min(userTapCount + 1, 10);
   lastTapMs = millis();
@@ -976,10 +1051,13 @@ function advanceFoldLine() {
 
 function keyTyped() {
 
-lastInteractionMs = millis();
-idleStartedMs = millis();
-idleIndex = 0;
+  lastInteractionMs = millis();
+  idleStartedMs = millis();
+  idleIndex = 0;
 
+  /* --- buttons timing (added) --- */
+  hideButtons();
+  /* --- end added --- */
 
   if (typeof key !== "string" || key.length !== 1) return;
 
@@ -1053,21 +1131,18 @@ function drawIdlePrompt() {
   textSize(fs);
   textFont("monospace");
 
-  // IMPORTANT: choose a color that contrasts with your background
-  // If your normal mode background is dark, keep white:
   const mainA = a * 0.6;
-  const glowA = a * 0.15;
 
   push();
-fill(120, mainA);        // medium gray
-textAlign(CENTER, CENTER);
-textSize(fs);
-textFont("monospace");
+  fill(120, mainA);        // medium gray
+  textAlign(CENTER, CENTER);
+  textSize(fs);
+  textFont("monospace");
 
-const y = foldMode ? height * 0.22 : height * 0.33;
-text(msg, width / 2, y);
+  const y = foldMode ? height * 0.22 : height * 0.33;
+  text(msg, width / 2, y);
 
-pop();
+  pop();
 
 }
 
@@ -1099,7 +1174,7 @@ function drawParallax(intensity) {
   }
   image(parallaxLayer, 0, 0);
 
-drawIdlePrompt();
+  drawIdlePrompt();
 
 }
 
@@ -1119,13 +1194,12 @@ class Flicker {
     this.dead = false;
 
     const marginX = width * 0.10;
-const safeTop = 72;     // avoid top button
-const safeBottom = 62;  // avoid bottom button
-this.pos = createVector(
-  random(marginX, width - marginX),
-  random(safeTop, height - safeBottom)
-);
-
+    const safeTop = 72;     // avoid top button
+    const safeBottom = 62;  // avoid bottom button
+    this.pos = createVector(
+      random(marginX, width - marginX),
+      random(safeTop, height - safeBottom)
+    );
 
     this.drift = createVector(random(-0.25, 0.25), random(-0.25, 0.25));
     this.distortion = 18;
