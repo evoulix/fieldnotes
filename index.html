@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,32 +23,16 @@
     }
     canvas { display: block; }
 
-    button {
-      background: rgba(255,255,255,0.04);
-      border-radius: 999px;
-      padding: 10px 18px;
-      opacity: 1;
-      transition: opacity 2.8s ease; /* slow fade in/out */
-    }
+   button {
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
+  padding: 10px 18px;
+}
 
-    button:active {
-      transform: scale(0.97);
-    }
-
-    @keyframes breathe {
-      0%   { opacity: 0.78; }
-      50%  { opacity: 0.98; }
-      100% { opacity: 0.78; }
-    }
-
-    button.breathing {
-      animation: breathe 8s ease-in-out infinite; /* slow breathing */
-    }
-
-    button.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
+  button:active {
+    transform: scale(0.97);
+  }
+    
   </style>
 </head>
 
@@ -84,6 +70,7 @@ let currentLineIdx = 0;
 let poemOrder = [];
 let poemOrderPtr = 0;
 
+
 // idle prompts
 const IDLE_AFTER_MS = 3000;
 const IDLE_CYCLE_MS = 6800;
@@ -97,85 +84,7 @@ const idlePrompts = [
   "should I touch the screen?"
 ];
 
-/* ---------- BUTTON VISIBILITY (NEW) ---------- */
-const BUTTON_SHOW_AFTER_MS = 5000;  // appear after 5s idle
-const BUTTON_VISIBLE_MS    = 5000;  // stay visible for 5s once shown
-const BUTTON_FADE_MS       = 2800;  // should match CSS transition (2.8s)
 
-let btnState = "hidden"; // "hidden" | "showing" | "visible" | "hiding"
-let btnStateSinceMs = 0;
-
-function setButtonClasses(hidden, breathing) {
-  if (!foldButton || !resetButton) return;
-  const els = [foldButton.elt, resetButton.elt];
-
-  for (const el of els) {
-    if (hidden) el.classList.add("hidden"); else el.classList.remove("hidden");
-    if (breathing) el.classList.add("breathing"); else el.classList.remove("breathing");
-  }
-}
-
-function hideButtonsNow() {
-  btnState = "hidden";
-  btnStateSinceMs = millis();
-  setButtonClasses(true, false);
-}
-
-function showButtonsNow() {
-  btnState = "showing";
-  btnStateSinceMs = millis();
-  // remove hidden so opacity can transition up
-  setButtonClasses(false, true);
-}
-
-function startHideButtons() {
-  btnState = "hiding";
-  btnStateSinceMs = millis();
-  // keep breathing during fade-out or remove it — your call:
-  setButtonClasses(true, false); // hidden triggers fade-out via opacity transition
-}
-
-function updateButtons() {
-  if (!foldButton || !resetButton) return;
-
-  const now = millis();
-  const idleFor = now - lastInteractionMs;
-
-  if (btnState === "hidden") {
-    if (idleFor >= BUTTON_SHOW_AFTER_MS) {
-      showButtonsNow();
-    }
-    return;
-  }
-
-  if (btnState === "showing") {
-    // after fade-in completes, consider them "visible"
-    if (now - btnStateSinceMs >= BUTTON_FADE_MS) {
-      btnState = "visible";
-      btnStateSinceMs = now;
-    }
-    return;
-  }
-
-  if (btnState === "visible") {
-    // keep visible for BUTTON_VISIBLE_MS, then fade out
-    if (now - btnStateSinceMs >= BUTTON_VISIBLE_MS) {
-      startHideButtons();
-    }
-    return;
-  }
-
-  if (btnState === "hiding") {
-    // after fade-out completes, fully hidden
-    if (now - btnStateSinceMs >= BUTTON_FADE_MS) {
-      btnState = "hidden";
-      btnStateSinceMs = now;
-      // ensure it stays non-interactive and invisible
-      setButtonClasses(true, false);
-    }
-    return;
-  }
-}
 
 /* ---------- PULSE WORDS (kept) ---------- */
 const PULSE_WORDS = new Set([
@@ -659,6 +568,7 @@ function nextFoldLine() {
 }
 
 /* ---------- calm-down factor (10) ---------- */
+// returns 0..1 where 0 = active, 1 = very calm (after ~12s)
 function calmFactor() {
   const idle = (millis() - lastTapMs);
   return constrain(map(idle, 12000, 26000, 0, 1), 0, 1);
@@ -667,13 +577,14 @@ function calmFactor() {
 /* ---------- spotlight (5) ---------- */
 function drawSpotlight() {
   if (!heldFoldLine) return;
-  const c = calmFactor();
-  const a = lerp(30, 120, c);
-  const soft = lerp(0.55, 0.72, c);
+  const c = calmFactor(); // calmer => stronger vignette
+  const a = lerp(30, 120, c);        // darkness amount
+  const soft = lerp(0.55, 0.72, c);  // center clarity
 
   push();
   noStroke();
 
+  // strong edges, clear center
   const cx = width / 2;
   const cy = height / 2;
   const maxD = sqrt(width * width + height * height);
@@ -687,6 +598,7 @@ function drawSpotlight() {
     ellipse(cx, cy, r * 2, r * 2);
   }
 
+  // slightly lift center (soft “witness” focus)
   fill(0, a * (1 - soft));
   ellipse(cx, cy, min(width, height) * 0.85, min(width, height) * 0.85);
 
@@ -697,27 +609,31 @@ function drawSpotlight() {
 function triggerRipple(mode) {
   rippleActive = true;
   rippleStartMs = millis();
-  rippleMode = mode;
+  rippleMode = mode; // "in" or "out"
 }
 
 function isIdlePromptActive() {
   return (millis() - lastInteractionMs >= IDLE_AFTER_MS);
 }
 
+
 function drawRipple() {
   if (!rippleActive) return;
 
   const elapsed = millis() - rippleStartMs;
-  const dur = 900;
+  const dur = 900; // ms
   const t = constrain(elapsed / dur, 0, 1);
 
+  // ease-out
   const e = 1 - pow(1 - t, 3);
 
+  // ring expands
   const cx = width / 2;
   const cy = height / 2;
   const maxR = sqrt(width * width + height * height) * 0.55;
   const r = e * maxR;
 
+  // faint, ceremonial
   let baseA = 40;
   if (rippleMode === "out") baseA = 55;
   const alpha = baseA * (1 - t);
@@ -728,6 +644,7 @@ function drawRipple() {
   strokeWeight(2);
   ellipse(cx, cy, r * 2, r * 2);
 
+  // inner echo ring
   stroke(255, alpha * 0.55);
   ellipse(cx, cy, r * 2 * 0.72, r * 2 * 0.72);
   pop();
@@ -735,7 +652,15 @@ function drawRipple() {
   if (t >= 1) rippleActive = false;
 }
 
-/* ---------- wrapping + centered render WITH pulsation + glow leakage + syntax fracture ---------- */
+function spawnMundaneOnTap() {
+  const mundanePhrase = random(mundanePhrases);
+  if (mundanePhrase.split(" ").length > 1) {
+    activePhrases.push(new Flicker(mundanePhrase, false, INTENSITY));
+    if (activePhrases.length > 530) activePhrases.shift();
+  }
+}
+
+/* ---------- wrapping + centered render WITH pulsation + glow leakage (3) + syntax fracture (4) ---------- */
 
 function layoutLines(str, maxWidth) {
   if (str === "") return [[{ t: "", isSpace: false }]];
@@ -766,17 +691,21 @@ function layoutLines(str, maxWidth) {
   return lines;
 }
 
+// syntax fracture decision: rare, subtle, only on held line, only sometimes
 function fractureSpecForLine(lineText) {
+  // every ~7 taps on average, but not deterministic: based on tap count and time
   if (!lineText || lineText.trim() === "") return null;
   if ((userTapCount % 7) !== 0) return null;
+  // don’t do it too often on mobile: 35% chance
   if (random() > 0.35) return null;
 
   const tokens = lineText.split(/\s+/).filter(Boolean);
   if (tokens.length < 4) return null;
 
+  // pick a mid token
   const idx = floor(random(1, tokens.length - 1));
   const key = cleanTokenForPulse(tokens[idx]);
-  const nudge = (random() < 0.5 ? -1 : 1) * random(0.8, 1.7);
+  const nudge = (random() < 0.5 ? -1 : 1) * random(0.8, 1.7); // px
   return { wordKey: key, nudgeX: nudge, nudgeY: random(-0.6, 0.6), untilMs: millis() + 220 };
 }
 
@@ -795,12 +724,15 @@ function drawCenteredWrappedTextPulseLeak(str, cx, cy, maxWidth, fontSize, alpha
   const t = millis() * 0.001;
   const calm = calmFactor();
 
+  // pulsation calms down with inactivity
   const baseSpeed = lerp(1.25, 0.55, calm);
   const amp = lerp(0.075, 0.03, calm);
 
+  // leak glow is slow, tide-like, and also calms down
   const leakSpeed = lerp(0.35, 0.18, calm);
   const leakAmp = lerp(0.65, 0.35, calm);
 
+  // Two-pass: glow then main, both pure white.
   for (let pass = 0; pass < 2; pass++) {
     let y = -blockH / 2 + lineH / 2;
     const a = (pass === 0) ? alphaGlow : alphaMain;
@@ -828,15 +760,18 @@ function drawCenteredWrappedTextPulseLeak(str, cx, cy, maxWidth, fontSize, alpha
         const shouldPulse = PULSE_WORDS.has(key);
         const shouldLeak = LEAK_WORDS.has(key);
 
+        // base scale pulse
         let s = 1.0;
         if (shouldPulse) s = 1 + amp * sin((t * baseSpeed) + phase);
 
+        // leak: a slow breathing halo by boosting glow alpha on the glow pass
         let leakBoost = 1.0;
         if (pass === 0 && shouldLeak) {
-          const swell = (sin((t * leakSpeed) + phase) + 1) / 2;
+          const swell = (sin((t * leakSpeed) + phase) + 1) / 2; // 0..1
           leakBoost = 1 + leakAmp * swell;
         }
 
+        // syntax fracture: tiny offset on one chosen word, only while window active
         let fx = 0, fy = 0;
         if (fracture && millis() < fracture.untilMs && key === fracture.wordKey) {
           fx = fracture.nudgeX;
@@ -877,7 +812,6 @@ function setup() {
 
   ghost = new Ghost();
   lastTapMs = millis();
-  lastInteractionMs = millis();
 
   foldButton = createButton('enter the fold');
   styleButton(foldButton, false);
@@ -886,33 +820,28 @@ function setup() {
     foldMode = !foldMode;
     foldButton.html(foldMode ? 'collapse the fold' : 'enter the fold');
     triggerRipple(foldMode ? "in" : "out");
+    // do not auto-seed: first line appears only on tap
+  
+lastInteractionMs = millis();
+idleStartedMs = millis();
 
-    // interaction resets idle + hides buttons
-    lastInteractionMs = millis();
-    lastTapMs = millis();
-    hideButtonsNow();
-  });
+
+});
 
   resetButton = createButton('reset the field');
   styleButton(resetButton, true);
   resetButton.position(windowWidth / 2 - 70, windowHeight - 54);
-  resetButton.mousePressed(() => {
-    resetField();
-    lastInteractionMs = millis();
-    lastTapMs = millis();
-    hideButtonsNow();
-  });
-
-  // start hidden
-  hideButtonsNow();
+  resetButton.mousePressed(resetField);
 }
 
 function styleButton(btn, small = false) {
+  btn.style('background', 'rgba(0,0,0,0.3)');
   btn.style('border', 'none');
   btn.style('color', '#ccc');
   btn.style('font-family', 'monospace');
   btn.style('text-shadow', '0 0 6px rgba(150, 200, 255, 0.5)');
   btn.style('cursor', 'pointer');
+  btn.style('transition', 'all 0.4s ease');
   btn.style('z-index', '1000');
 
   btn.style('font-size', small
@@ -947,13 +876,14 @@ function resetField() {
   poemOrderPtr = 0;
 
   buildPoemOrder();
+
   lastTapMs = millis();
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   parallaxLayer = createGraphics(windowWidth, windowHeight);
-  resetButton.position(windowWidth / 2 - 70, windowHeight - 54);
+  resetButton.position(windowWidth / 2 - 70, windowHeight - 44);
   foldButton.position(windowWidth / 2 - 80, 20);
   if (heldFoldLine) heldFoldLine.snapToCenter();
 }
@@ -963,32 +893,38 @@ function touchStarted() { mousePressed(); }
 /* ---------- draw ---------- */
 
 function draw() {
-  background(0);
+  background(foldMode ? 10 : 240);
   const intensity = INTENSITY;
 
-  // update buttons (idle fade in/out)
-  updateButtons();
+  // mundane phrases only in normal mode AND only after user has interacted
+if (!foldMode && !isIdlePromptActive() && userTapCount > 0 &&
+    frameCount % int(420 / (max(userTapCount, 1) * intensity)) === 0) {
 
-  // mundane phrases only in normal mode AND only after user has interacted and NOT while idle prompt active
-  if (!foldMode && !isIdlePromptActive() && userTapCount > 0 &&
-      frameCount % int(420 / (max(userTapCount, 1) * intensity)) === 0) {
+  const mundanePhrase = random(mundanePhrases);
+  if (mundanePhrase.split(' ').length > 1) activePhrases.push(new Flicker(mundanePhrase, false, intensity));
+  if (activePhrases.length > 530) activePhrases.shift();
+}
 
-    const mundanePhrase = random(mundanePhrases);
-    if (mundanePhrase.split(' ').length > 1) activePhrases.push(new Flicker(mundanePhrase, false, intensity));
-    if (activePhrases.length > 530) activePhrases.shift();
-  }
 
+  // update + display all active phrases (includes released FoldLine residues)
   for (let f of activePhrases) {
     f.update();
     f.display();
   }
   activePhrases = activePhrases.filter(f => !f.dead);
 
+  // spotlight (fold only, but can remain gentle if you want it always)
   if (foldMode) drawSpotlight();
 
+  // held fold line centered
   if (heldFoldLine) {
     heldFoldLine.update();
     heldFoldLine.displayHeld();
+  }
+
+  if (frameCount % 180 === 0) {
+    memory.push(new MemoryFrame());
+    if (memory.length > maxMemory) memory.shift();
   }
 
   drawShadows(intensity);
@@ -1000,26 +936,26 @@ function draw() {
   if (foldMode) drawOnesAndZeros();
   drawParallax(intensity);
 
+  // ripple drawn last so it reads as “on top”
   drawRipple();
 }
 
 /* ---------- input ---------- */
 
-function registerInteraction() {
-  lastInteractionMs = millis();
-  lastTapMs = millis();
-  idleIndex = 0;
-  hideButtonsNow(); // anytime you interact, buttons vanish + reset timer
-}
-
 function mousePressed() {
-  registerInteraction();
+
+
+lastInteractionMs = millis();
+idleStartedMs = millis();
+idleIndex = 0;
 
   userTapCount = min(userTapCount + 1, 10);
+  lastTapMs = millis();
 
   if (foldMode) {
     advanceFoldLine();
   } else {
+    // existing interaction (distort nearby fold residues if you tap them)
     for (let f of activePhrases) {
       if (f.isFold && dist(mouseX, mouseY, f.pos.x, f.pos.y) < 140) {
         if (typeof f.distort === "function") f.distort();
@@ -1041,7 +977,12 @@ function advanceFoldLine() {
 }
 
 function keyTyped() {
-  registerInteraction();
+
+lastInteractionMs = millis();
+idleStartedMs = millis();
+idleIndex = 0;
+
+
   if (typeof key !== "string" || key.length !== 1) return;
 
   if (typedLetters.length > 100) typedLetters.shift();
@@ -1080,6 +1021,7 @@ function drawConstellations(intensity) {
 }
 
 function drawShadows(intensity) {
+  // calm-down reduces shadow “noise”
   const calm = calmFactor();
   const count = floor(lerp(40 * intensity, 12 * intensity, calm));
 
@@ -1093,33 +1035,47 @@ function drawShadows(intensity) {
 }
 
 function drawIdlePrompt() {
+
   const now = millis();
   const idleFor = now - lastInteractionMs;
   if (idleFor < IDLE_AFTER_MS) return;
 
+  // cycle messages while idle
   const cycleT = now - (lastInteractionMs + IDLE_AFTER_MS);
   idleIndex = floor(cycleT / IDLE_CYCLE_MS) % idlePrompts.length;
+
   const msg = idlePrompts[idleIndex];
 
+  // gentle fade in/out per message cycle
   const within = cycleT % IDLE_CYCLE_MS;
-  const a = 255
-    * constrain(map(within, 0, 600, 0, 1), 0, 1)
-    * constrain(map(within, IDLE_CYCLE_MS - 600, IDLE_CYCLE_MS, 1, 0), 0, 1);
+  const a = 255 * constrain(map(within, 0, 600, 0, 1), 0, 1) * constrain(map(within, IDLE_CYCLE_MS - 600, IDLE_CYCLE_MS, 1, 0), 0, 1);
 
+  // draw it centered, readable
   const fs = (width < 500) ? 18 : 22;
-
-  push();
-  fill(120, a * 0.6);
-  textAlign(CENTER, CENTER);
   textSize(fs);
   textFont("monospace");
 
-  const y = foldMode ? height * 0.22 : height * 0.33;
-  text(msg, width / 2, y);
-  pop();
+  // IMPORTANT: choose a color that contrasts with your background
+  // If your normal mode background is dark, keep white:
+  const mainA = a * 0.6;
+  const glowA = a * 0.15;
+
+  push();
+fill(120, mainA);        // medium gray
+textAlign(CENTER, CENTER);
+textSize(fs);
+textFont("monospace");
+
+const y = foldMode ? height * 0.22 : height * 0.33;
+text(msg, width / 2, y);
+
+pop();
+
 }
 
+
 function drawOnesAndZeros() {
+  // calm-down reduces the amount
   const calm = calmFactor();
   const n = floor(lerp(100, 40, calm));
 
@@ -1131,12 +1087,13 @@ function drawOnesAndZeros() {
 }
 
 function drawParallax(intensity) {
+  // calm-down reduces parallax too
   const calm = calmFactor();
   const mult = lerp(1.0, 0.35, calm);
 
   parallaxLayer.clear();
   parallaxLayer.noStroke();
-  parallaxLayer.fill(color(255, 10));
+  parallaxLayer.fill(foldMode ? color(255, 10) : color(0, 10));
   for (let i = 0; i < 30 * intensity * mult; i++) {
     let x = mouseX * 0.02 * (i + 1) * mult + sin(frameCount * 0.001 + i) * 10 * mult;
     let y = mouseY * 0.02 * (i + 1) * mult + cos(frameCount * 0.001 + i) * 10 * mult;
@@ -1144,7 +1101,8 @@ function drawParallax(intensity) {
   }
   image(parallaxLayer, 0, 0);
 
-  drawIdlePrompt();
+drawIdlePrompt();
+
 }
 
 /* ---------- phrase classes ---------- */
@@ -1163,12 +1121,13 @@ class Flicker {
     this.dead = false;
 
     const marginX = width * 0.10;
-    const safeTop = 72;
-    const safeBottom = 62;
-    this.pos = createVector(
-      random(marginX, width - marginX),
-      random(safeTop, height - safeBottom)
-    );
+const safeTop = 72;     // avoid top button
+const safeBottom = 62;  // avoid bottom button
+this.pos = createVector(
+  random(marginX, width - marginX),
+  random(safeTop, height - safeBottom)
+);
+
 
     this.drift = createVector(random(-0.25, 0.25), random(-0.25, 0.25));
     this.distortion = 18;
@@ -1208,6 +1167,8 @@ class FoldLine {
     this.pos = this.center.copy();
 
     this.state = "held";
+
+    // ceremonial fade-in (slow)
     this.alpha = 0;
     this.fadeInRate = 8;
 
@@ -1216,9 +1177,13 @@ class FoldLine {
     this.pickNormalTarget();
     this.lerpRate = 0.004;
 
+    // slow fade-out (works in both modes)
     this.fadeRate = (this.text.trim() === "") ? 0.9 : 0.22;
+
+    // very gentle shrink
     this.shrink = (this.text.trim() === "") ? 0.03 : 0.008;
 
+    // syntax fracture spec (computed once per held line; might be null)
     this.fracture = fractureSpecForLine(this.text);
   }
 
@@ -1238,8 +1203,8 @@ class FoldLine {
 
   releaseAndPushOut() {
     this.state = "released";
-    this.alpha = max(this.alpha, 255);
 
+    this.alpha = max(this.alpha, 255); 
     const marginX = width * 0.10;
     const safeTop = 72;
     const safeBottom = 62;
@@ -1259,7 +1224,11 @@ class FoldLine {
     ty = constrain(ty, safeTop + 10, height - safeBottom - 10);
 
     this.target = createVector(tx, ty);
+
+    // faster push to clear center for the next line
     this.lerpRate = 0.032;
+
+    // once released, we stop fracturing this line
     this.fracture = null;
   }
 
@@ -1319,6 +1288,19 @@ class FoldLine {
   }
 }
 
+class MemoryFrame {
+  constructor() {
+    this.points = [];
+    for (let i = 0; i < 30; i++) this.points.push({ x: random(width), y: random(height) });
+  }
+  display() {
+    stroke(255, 30);
+    strokeWeight(0.3);
+    for (let pt of this.points) point(pt.x, pt.y);
+  }
+}
+
+// Ghost: no letters generated, no text drawn
 class Ghost {
   constructor() {
     this.pos = createVector(random(width), random(height));
@@ -1368,7 +1350,6 @@ function generatePhrases() {
     "Open a window","Is it Friday?","No more scrolling","This is a lot"
   ];
 }
-
 </script>
 </body>
 </html>
