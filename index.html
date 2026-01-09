@@ -31,27 +31,25 @@
     transform: scale(0.97);
   }
 
-  /* --- buttons: breathe + hide/show timing (added) --- */
   @keyframes breathe {
-    0%   { opacity: 0.85; }
-    50%  { opacity: 1; }
-    100% { opacity: 0.85; }
-  }
+  0%   { opacity: 0.82; }
+  50%  { opacity: 0.98; }
+  100% { opacity: 0.82; }
+}
 
-  button.breathing {
-    animation: breathe 4s ease-in-out infinite;
-  }
+button {
+  opacity: 1;                 
+  transition: opacity 2.8s ease; 
+}
 
-  button {
-    transition: opacity 1.2s ease;
-  }
+button.breathing {
+  animation: breathe 8s ease-in-out infinite; 
 
-  button.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-  /* --- end added --- */
-    
+button.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
   </style>
 </head>
 
@@ -74,15 +72,12 @@ let parallaxLayer;
 const INTENSITY = 5;
 let heldFoldLine = null;
 
-// inactivity / calm-down
 let lastTapMs = 0;
 
-// ripple (one-shot)
+
 let rippleActive = false;
 let rippleStartMs = 0;
-let rippleMode = "in"; // "in" or "out"
-
-// poem rotation state (supports multiple poems split by separators)
+let rippleMode = "in"; 
 let poems = [];
 let currentPoemIdx = -1;
 let currentLineIdx = 0;
@@ -90,7 +85,6 @@ let poemOrder = [];
 let poemOrderPtr = 0;
 
 
-// idle prompts
 const IDLE_AFTER_MS = 3000;
 const IDLE_CYCLE_MS = 6800;
 
@@ -103,9 +97,8 @@ const idlePrompts = [
   "should I touch the screen?"
 ];
 
-/* --- button hide/show behavior (added) --- */
-const BUTTON_SHOW_AFTER_MS = 3000; // appear after 3s idle
-const BUTTON_STAY_MS = 5000;       // stay visible for 5s
+const BUTTON_SHOW_AFTER_MS = 5000;
+const BUTTON_STAY_MS = 5000;      
 let buttonsHidden = false;
 let buttonsShownAt = 0;
 
@@ -127,11 +120,7 @@ function showButtons() {
   buttonsHidden = false;
   buttonsShownAt = millis();
 }
-/* --- end added --- */
 
-
-
-/* ---------- PULSE WORDS (kept) ---------- */
 const PULSE_WORDS = new Set([
   "reality","experiencing","potentiality","one","other","zero",
   "system","disintegration","empathy","shame","void","truth","oneness",
@@ -140,7 +129,6 @@ const PULSE_WORDS = new Set([
   "holy","shattering","lonely","god","love","rage","certainty","stay"
 ]);
 
-/* ---------- GLOW-LEAK WORDS (subset, strongest “leak” concepts) ---------- */
 const LEAK_WORDS = new Set([
   "truth","oneness","void","holy","shattering","god","love","rage",
   "watching","meaning","system","reality","lonely","chaos","mirror"
@@ -163,7 +151,6 @@ function wordHash(s) {
   return (h >>> 0);
 }
 
-/* ---------- POEM ---------- */
 const rawFoldPoems = `
 you are experiencing
 reality
@@ -541,8 +528,6 @@ isn’t also part
 of the staying
 `;
 
-/* ---------- parsing poems ---------- */
-
 function isSeparatorLine(line) {
   const t = (line || "").trim();
   if (!t) return false;
@@ -612,24 +597,21 @@ function nextFoldLine() {
   return line;
 }
 
-/* ---------- calm-down factor (10) ---------- */
-// returns 0..1 where 0 = active, 1 = very calm (after ~12s)
+
 function calmFactor() {
   const idle = (millis() - lastTapMs);
   return constrain(map(idle, 12000, 26000, 0, 1), 0, 1);
 }
 
-/* ---------- spotlight (5) ---------- */
 function drawSpotlight() {
   if (!heldFoldLine) return;
-  const c = calmFactor(); // calmer => stronger vignette
-  const a = lerp(30, 120, c);        // darkness amount
-  const soft = lerp(0.55, 0.72, c);  // center clarity
+  const c = calmFactor(); 
+  const a = lerp(30, 120, c);       
+  const soft = lerp(0.55, 0.72, c); 
 
   push();
   noStroke();
 
-  // strong edges, clear center
   const cx = width / 2;
   const cy = height / 2;
   const maxD = sqrt(width * width + height * height);
@@ -643,18 +625,18 @@ function drawSpotlight() {
     ellipse(cx, cy, r * 2, r * 2);
   }
 
-  // slightly lift center (soft “witness” focus)
+  
   fill(0, a * (1 - soft));
   ellipse(cx, cy, min(width, height) * 0.85, min(width, height) * 0.85);
 
   pop();
 }
 
-/* ---------- ripple (8) ---------- */
+
 function triggerRipple(mode) {
   rippleActive = true;
   rippleStartMs = millis();
-  rippleMode = mode; // "in" or "out"
+  rippleMode = mode;
 }
 
 function isIdlePromptActive() {
@@ -669,16 +651,15 @@ function drawRipple() {
   const dur = 900; // ms
   const t = constrain(elapsed / dur, 0, 1);
 
-  // ease-out
+
   const e = 1 - pow(1 - t, 3);
 
-  // ring expands
   const cx = width / 2;
   const cy = height / 2;
   const maxR = sqrt(width * width + height * height) * 0.55;
   const r = e * maxR;
 
-  // faint, ceremonial
+
   let baseA = 40;
   if (rippleMode === "out") baseA = 55;
   const alpha = baseA * (1 - t);
@@ -689,7 +670,7 @@ function drawRipple() {
   strokeWeight(2);
   ellipse(cx, cy, r * 2, r * 2);
 
-  // inner echo ring
+  
   stroke(255, alpha * 0.55);
   ellipse(cx, cy, r * 2 * 0.72, r * 2 * 0.72);
   pop();
@@ -705,7 +686,6 @@ function spawnMundaneOnTap() {
   }
 }
 
-/* ---------- wrapping + centered render WITH pulsation + glow leakage (3) + syntax fracture (4) ---------- */
 
 function layoutLines(str, maxWidth) {
   if (str === "") return [[{ t: "", isSpace: false }]];
@@ -736,18 +716,18 @@ function layoutLines(str, maxWidth) {
   return lines;
 }
 
-// syntax fracture decision: rare, subtle, only on held line, only sometimes
+
 function fractureSpecForLine(lineText) {
-  // every ~7 taps on average, but not deterministic: based on tap count and time
+
   if (!lineText || lineText.trim() === "") return null;
   if ((userTapCount % 7) !== 0) return null;
-  // don’t do it too often on mobile: 35% chance
+ 
   if (random() > 0.35) return null;
 
   const tokens = lineText.split(/\s+/).filter(Boolean);
   if (tokens.length < 4) return null;
 
-  // pick a mid token
+ 
   const idx = floor(random(1, tokens.length - 1));
   const key = cleanTokenForPulse(tokens[idx]);
   const nudge = (random() < 0.5 ? -1 : 1) * random(0.8, 1.7); // px
@@ -769,15 +749,15 @@ function drawCenteredWrappedTextPulseLeak(str, cx, cy, maxWidth, fontSize, alpha
   const t = millis() * 0.001;
   const calm = calmFactor();
 
-  // pulsation calms down with inactivity
+ 
   const baseSpeed = lerp(1.25, 0.55, calm);
   const amp = lerp(0.075, 0.03, calm);
 
-  // leak glow is slow, tide-like, and also calms down
+ 
   const leakSpeed = lerp(0.35, 0.18, calm);
   const leakAmp = lerp(0.65, 0.35, calm);
 
-  // Two-pass: glow then main, both pure white.
+ 
   for (let pass = 0; pass < 2; pass++) {
     let y = -blockH / 2 + lineH / 2;
     const a = (pass === 0) ? alphaGlow : alphaMain;
@@ -805,18 +785,18 @@ function drawCenteredWrappedTextPulseLeak(str, cx, cy, maxWidth, fontSize, alpha
         const shouldPulse = PULSE_WORDS.has(key);
         const shouldLeak = LEAK_WORDS.has(key);
 
-        // base scale pulse
+       
         let s = 1.0;
         if (shouldPulse) s = 1 + amp * sin((t * baseSpeed) + phase);
 
-        // leak: a slow breathing halo by boosting glow alpha on the glow pass
+        
         let leakBoost = 1.0;
         if (pass === 0 && shouldLeak) {
           const swell = (sin((t * leakSpeed) + phase) + 1) / 2; // 0..1
           leakBoost = 1 + leakAmp * swell;
         }
 
-        // syntax fracture: tiny offset on one chosen word, only while window active
+       
         let fx = 0, fy = 0;
         if (fracture && millis() < fracture.untilMs && key === fracture.wordKey) {
           fx = fracture.nudgeX;
@@ -843,7 +823,6 @@ function drawCenteredWrappedTextPulseLeak(str, cx, cy, maxWidth, fontSize, alpha
   pop();
 }
 
-/* ---------- setup ---------- */
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -865,14 +844,12 @@ function setup() {
     foldMode = !foldMode;
     foldButton.html(foldMode ? 'collapse the fold' : 'enter the fold');
     triggerRipple(foldMode ? "in" : "out");
-    // do not auto-seed: first line appears only on tap
   
     lastInteractionMs = millis();
     idleStartedMs = millis();
 
-    /* --- buttons timing (added) --- */
     hideButtons();
-    /* --- end added --- */
+   
   });
 
   resetButton = createButton('reset the field');
@@ -880,10 +857,10 @@ function setup() {
   resetButton.position(windowWidth / 2 - 70, windowHeight - 54);
   resetButton.mousePressed(resetField);
 
-  /* --- start hidden initially (added) --- */
+ 
   hideButtons();
   lastInteractionMs = millis();
-  /* --- end added --- */
+  
 }
 
 function styleButton(btn, small = false) {
@@ -931,10 +908,10 @@ function resetField() {
 
   lastTapMs = millis();
 
-  /* --- buttons timing (added) --- */
+ 
   lastInteractionMs = millis();
   hideButtons();
-  /* --- end added --- */
+  
 }
 
 function windowResized() {
@@ -947,13 +924,13 @@ function windowResized() {
 
 function touchStarted() { mousePressed(); }
 
-/* ---------- draw ---------- */
+
 
 function draw() {
   background(foldMode ? 10 : 240);
   const intensity = INTENSITY;
 
-  // mundane phrases only in normal mode AND only after user has interacted
+ 
   if (!foldMode && !isIdlePromptActive() && userTapCount > 0 &&
       frameCount % int(420 / (max(userTapCount, 1) * intensity)) === 0) {
 
@@ -962,17 +939,17 @@ function draw() {
     if (activePhrases.length > 530) activePhrases.shift();
   }
 
-  // update + display all active phrases (includes released FoldLine residues)
+  
   for (let f of activePhrases) {
     f.update();
     f.display();
   }
   activePhrases = activePhrases.filter(f => !f.dead);
 
-  // spotlight (fold only, but can remain gentle if you want it always)
+  
   if (foldMode) drawSpotlight();
 
-  // held fold line centered
+  
   if (heldFoldLine) {
     heldFoldLine.update();
     heldFoldLine.displayHeld();
@@ -992,25 +969,25 @@ function draw() {
   if (foldMode) drawOnesAndZeros();
   drawParallax(intensity);
 
-  // ripple drawn last so it reads as “on top”
+ 
   drawRipple();
 
-  /* --- buttons visibility timing (added) --- */
+  
   const now = millis();
 
-  // show after 3s idle
+ 
   if (buttonsHidden && (now - lastInteractionMs > BUTTON_SHOW_AFTER_MS)) {
     showButtons();
   }
 
-  // hide after 5s visible
+
   if (!buttonsHidden && (now - buttonsShownAt > BUTTON_STAY_MS)) {
     hideButtons();
   }
-  /* --- end added --- */
+ 
 }
 
-/* ---------- input ---------- */
+
 
 function mousePressed() {
 
@@ -1018,9 +995,9 @@ function mousePressed() {
   idleStartedMs = millis();
   idleIndex = 0;
 
-  /* --- buttons timing (added) --- */
+ 
   hideButtons();
-  /* --- end added --- */
+ 
 
   userTapCount = min(userTapCount + 1, 10);
   lastTapMs = millis();
@@ -1028,7 +1005,7 @@ function mousePressed() {
   if (foldMode) {
     advanceFoldLine();
   } else {
-    // existing interaction (distort nearby fold residues if you tap them)
+   
     for (let f of activePhrases) {
       if (f.isFold && dist(mouseX, mouseY, f.pos.x, f.pos.y) < 140) {
         if (typeof f.distort === "function") f.distort();
@@ -1055,9 +1032,9 @@ function keyTyped() {
   idleStartedMs = millis();
   idleIndex = 0;
 
-  /* --- buttons timing (added) --- */
+
   hideButtons();
-  /* --- end added --- */
+ 
 
   if (typeof key !== "string" || key.length !== 1) return;
 
@@ -1069,7 +1046,7 @@ function keyTyped() {
   constellationPoints.push({ x: mirroredX, y, time: millis() });
 }
 
-/* ---------- visuals ---------- */
+
 
 function drawConstellations(intensity) {
   stroke(255, 50);
@@ -1097,7 +1074,7 @@ function drawConstellations(intensity) {
 }
 
 function drawShadows(intensity) {
-  // calm-down reduces shadow “noise”
+
   const calm = calmFactor();
   const count = floor(lerp(40 * intensity, 12 * intensity, calm));
 
@@ -1116,17 +1093,17 @@ function drawIdlePrompt() {
   const idleFor = now - lastInteractionMs;
   if (idleFor < IDLE_AFTER_MS) return;
 
-  // cycle messages while idle
+  
   const cycleT = now - (lastInteractionMs + IDLE_AFTER_MS);
   idleIndex = floor(cycleT / IDLE_CYCLE_MS) % idlePrompts.length;
 
   const msg = idlePrompts[idleIndex];
 
-  // gentle fade in/out per message cycle
+  
   const within = cycleT % IDLE_CYCLE_MS;
   const a = 255 * constrain(map(within, 0, 600, 0, 1), 0, 1) * constrain(map(within, IDLE_CYCLE_MS - 600, IDLE_CYCLE_MS, 1, 0), 0, 1);
 
-  // draw it centered, readable
+  
   const fs = (width < 500) ? 18 : 22;
   textSize(fs);
   textFont("monospace");
@@ -1134,7 +1111,7 @@ function drawIdlePrompt() {
   const mainA = a * 0.6;
 
   push();
-  fill(120, mainA);        // medium gray
+  fill(120, mainA);       
   textAlign(CENTER, CENTER);
   textSize(fs);
   textFont("monospace");
@@ -1148,7 +1125,7 @@ function drawIdlePrompt() {
 
 
 function drawOnesAndZeros() {
-  // calm-down reduces the amount
+ 
   const calm = calmFactor();
   const n = floor(lerp(100, 40, calm));
 
@@ -1160,7 +1137,7 @@ function drawOnesAndZeros() {
 }
 
 function drawParallax(intensity) {
-  // calm-down reduces parallax too
+  
   const calm = calmFactor();
   const mult = lerp(1.0, 0.35, calm);
 
@@ -1178,7 +1155,6 @@ function drawParallax(intensity) {
 
 }
 
-/* ---------- phrase classes ---------- */
 
 class Flicker {
   constructor(txt, isFold, intensity) {
@@ -1194,8 +1170,8 @@ class Flicker {
     this.dead = false;
 
     const marginX = width * 0.10;
-    const safeTop = 72;     // avoid top button
-    const safeBottom = 62;  // avoid bottom button
+    const safeTop = 72;     
+    const safeBottom = 62;  
     this.pos = createVector(
       random(marginX, width - marginX),
       random(safeTop, height - safeBottom)
@@ -1240,7 +1216,7 @@ class FoldLine {
 
     this.state = "held";
 
-    // ceremonial fade-in (slow)
+   
     this.alpha = 0;
     this.fadeInRate = 8;
 
@@ -1249,13 +1225,13 @@ class FoldLine {
     this.pickNormalTarget();
     this.lerpRate = 0.004;
 
-    // slow fade-out (works in both modes)
+    
     this.fadeRate = (this.text.trim() === "") ? 0.9 : 0.22;
 
-    // very gentle shrink
+    
     this.shrink = (this.text.trim() === "") ? 0.03 : 0.008;
 
-    // syntax fracture spec (computed once per held line; might be null)
+   
     this.fracture = fractureSpecForLine(this.text);
   }
 
@@ -1297,10 +1273,10 @@ class FoldLine {
 
     this.target = createVector(tx, ty);
 
-    // faster push to clear center for the next line
+   
     this.lerpRate = 0.032;
 
-    // once released, we stop fracturing this line
+   
     this.fracture = null;
   }
 
@@ -1372,7 +1348,7 @@ class MemoryFrame {
   }
 }
 
-// Ghost: no letters generated, no text drawn
+
 class Ghost {
   constructor() {
     this.pos = createVector(random(width), random(height));
@@ -1383,7 +1359,7 @@ class Ghost {
   display() {}
 }
 
-/* ---------- mundane phrases ---------- */
+
 
 function generatePhrases() {
   mundanePhrases = [
