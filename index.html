@@ -807,7 +807,7 @@ function setup() {
   foldButton.position(windowWidth / 2 - 80, 20);
   foldButton.mousePressed(() => {
     foldMode = !foldMode;
-    foldButton.html(foldMode ? 'collapse' : 'enter the fold');
+    foldButton.html(foldMode ? 'collapse the fold' : 'enter the fold');
     triggerRipple(foldMode ? "in" : "out");
     // do not auto-seed: first line appears only on tap
   
